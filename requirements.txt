@@ -2,7 +2,7 @@ pytest
 fastapi
 uvicorn
 python-multipart
-
+ollama
 # Add whichever embedding / model libraries you choose to use, e.g.:
 # sentence-transformers
 # openai

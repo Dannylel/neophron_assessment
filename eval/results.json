@@ -1,0 +1,170 @@
+[
+  {
+    "id": "q1",
+    "user": "user_a",
+    "query": "What was Maple Ridge Apartments' total revenue in Q3 2026?",
+    "answer": "412,000",
+    "citations": [
+      "doc1.txt#0",
+      "doc4.txt#0",
+      "doc6.txt#0"
+    ],
+    "grounded": true,
+    "used_tool": false,
+    "tool_calls": [],
+    "model_answer": "412,000",
+    "retrieved": [
+      {
+        "chunk_id": "doc1.txt#0",
+        "score": 0.916,
+        "text": "Q3 2026 financial summary for Maple Ridge Apartments: total revenue $412,000, operating expenses $158,000."
+      },
+      {
+        "chunk_id": "doc4.txt#0",
+        "score": 0.598,
+        "text": "Q3 2026 financial summary for Oak Hill Plaza: total revenue $275,000, operating expenses $121,000."
+      },
+      {
+        "chunk_id": "doc6.txt#0",
+        "score": 0.45,
+        "text": "Lease renewal notice \u2014 Oak Hill Plaza, Unit 12, effective November 2026. Tenant has elected to renew for a 12-month term at the existing rate."
+      }
+    ],
+    "reciprocal_rank": 1.0
+  },
+  {
+    "id": "q2",
+    "user": "user_b",
+    "query": "When was the HVAC at Maple Ridge Apartments Unit 4B last repaired?",
+    "answer": "The HVAC system at Maple Ridge Apartments, Unit 4B was repaired and inspected in March 2026 [doc3.txt#0].",
+    "citations": [
+      "doc3.txt#0",
+      "doc6.txt#0",
+      "doc2.txt#0"
+    ],
+    "grounded": true,
+    "used_tool": false,
+    "tool_calls": [],
+    "model_answer": "The HVAC system at Maple Ridge Apartments, Unit 4B was repaired and inspected in March 2026 [doc3.txt#0].",
+    "retrieved": [
+      {
+        "chunk_id": "doc3.txt#0",
+        "score": 0.864,
+        "text": "Maintenance log \u2014 Maple Ridge Apartments, Unit 4B: HVAC system repaired and inspected in March 2026. No outstanding work orders."
+      },
+      {
+        "chunk_id": "doc6.txt#0",
+        "score": 0.479,
+        "text": "Lease renewal notice \u2014 Oak Hill Plaza, Unit 12, effective November 2026. Tenant has elected to renew for a 12-month term at the existing rate."
+      },
+      {
+        "chunk_id": "doc2.txt#0",
+        "score": 0.325,
+        "text": "Company holiday schedule and office policies for 2026. The office is closed on all federal holidays and the last week of December."
+      }
+    ],
+    "reciprocal_rank": 1.0
+  },
+  {
+    "id": "q3",
+    "user": "user_c",
+    "query": "What is the office holiday policy for 2026?",
+    "answer": "The office is closed on all federal holidays and the last week of December in 2026 [doc2.txt#0].",
+    "citations": [
+      "doc2.txt#0",
+      "doc5.txt#0"
+    ],
+    "grounded": true,
+    "used_tool": false,
+    "tool_calls": [],
+    "model_answer": "The office is closed on all federal holidays and the last week of December in 2026 [doc2.txt#0].",
+    "retrieved": [
+      {
+        "chunk_id": "doc2.txt#0",
+        "score": 0.828,
+        "text": "Company holiday schedule and office policies for 2026. The office is closed on all federal holidays and the last week of December."
+      },
+      {
+        "chunk_id": "doc5.txt#0",
+        "score": 0.38,
+        "text": "New employee onboarding checklist: complete IT setup, review the employee handbook, and schedule a 30-day check-in with your manager."
+      }
+    ],
+    "reciprocal_rank": 1.0
+  },
+  {
+    "id": "q4",
+    "user": "user_a",
+    "query": "What is the NOI for Oak Hill Plaza in Q3 2026?",
+    "answer": "The Net Operating Income (NOI) for Oak Hill Plaza in Q3 2026 is $154,000.",
+    "citations": [
+      "doc4.txt#0",
+      "doc6.txt#0",
+      "doc1.txt#0"
+    ],
+    "grounded": true,
+    "used_tool": true,
+    "tool_calls": [
+      {
+        "name": "calculate_noi",
+        "arguments": {
+          "property_id": 2,
+          "period": "Q3-2026"
+        },
+        "result": 154000.0
+      }
+    ],
+    "model_answer": "The Net Operating Income (NOI) for Oak Hill Plaza in Q3 2026 is $154,000.",
+    "retrieved": [
+      {
+        "chunk_id": "doc4.txt#0",
+        "score": 0.842,
+        "text": "Q3 2026 financial summary for Oak Hill Plaza: total revenue $275,000, operating expenses $121,000."
+      },
+      {
+        "chunk_id": "doc6.txt#0",
+        "score": 0.635,
+        "text": "Lease renewal notice \u2014 Oak Hill Plaza, Unit 12, effective November 2026. Tenant has elected to renew for a 12-month term at the existing rate."
+      },
+      {
+        "chunk_id": "doc1.txt#0",
+        "score": 0.517,
+        "text": "Q3 2026 financial summary for Maple Ridge Apartments: total revenue $412,000, operating expenses $158,000."
+      }
+    ],
+    "reciprocal_rank": 1.0
+  },
+  {
+    "id": "q5",
+    "user": "user_b",
+    "query": "What is the security deposit amount for the Oak Hill Plaza Unit 12 lease renewal?",
+    "answer": "I don't know [doc6.txt#0] does not provide information about security deposit amounts.",
+    "citations": [
+      "doc6.txt#0",
+      "doc3.txt#0",
+      "doc2.txt#0"
+    ],
+    "grounded": true,
+    "used_tool": false,
+    "tool_calls": [],
+    "model_answer": "I don't know [doc6.txt#0] does not provide information about security deposit amounts.",
+    "retrieved": [
+      {
+        "chunk_id": "doc6.txt#0",
+        "score": 0.801,
+        "text": "Lease renewal notice \u2014 Oak Hill Plaza, Unit 12, effective November 2026. Tenant has elected to renew for a 12-month term at the existing rate."
+      },
+      {
+        "chunk_id": "doc3.txt#0",
+        "score": 0.47,
+        "text": "Maintenance log \u2014 Maple Ridge Apartments, Unit 4B: HVAC system repaired and inspected in March 2026. No outstanding work orders."
+      },
+      {
+        "chunk_id": "doc2.txt#0",
+        "score": 0.314,
+        "text": "Company holiday schedule and office policies for 2026. The office is closed on all federal holidays and the last week of December."
+      }
+    ],
+    "reciprocal_rank": 1.0
+  }
+]

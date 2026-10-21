@@ -4,3 +4,6 @@ __pycache__/
 venv/
 .env
 .pytest_cache/
+graphify-out/
+toy_tool.py
+round_trip_test.py
