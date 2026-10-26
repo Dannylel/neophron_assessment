@@ -42,34 +42,13 @@ def calculate_noi(property_id: int, period: str, csv_path: str = "data/propertie
                         'expenses':float(row['operating_expenses']), 'source' : f'{csv_path}#property_id = {pid}, period = {wanted_period}'}
     raise ValueError(f"No data for property {property_id} in {wanted_period}")
     raise NotImplementedError("Read properties.csv and compute NOI deterministically")
-
-    # print(_normalize_period('2026-q2'))
-# A provider-agnostic description of this tool, in JSON-Schema-ish shape.
-# Translate this into whatever your chosen model's API actually expects
-# (OpenAI/Anthropic tool schemas differ slightly in envelope, not in spirit).
-# CALCULATE_NOI_TOOL_SCHEMA = [{
-#     "type": "function",
-#     "function": {
-#         "name": "calculate_noi",
-#         "description": (
-#             "Compute Net Operating Income (revenue - operating expenses) for a "
-#             "property and period. Always use this tool for NOI questions -- "
-#             "never estimate or compute NOI yourself."
-#         ),
-#         "parameters": {
-#             "type": "object",
-#             "property_id": {"type": "integer", "description": "The property's numeric id"},
-#             "period": {"type": "string", "description": "e.g. 'Q3-2026'"}
-#         },
-#         "required": ["property_id", "period"],
-#     },
-# }]
 CALCULATE_NOI_TOOL_SCHEMA = {
     "name": "calculate_noi",
     "description": (
         "Compute Net Operating Income (revenue - operating expenses) for a "
         "property and period. Always use this tool for NOI questions -- "
         "never estimate or compute NOI yourself."
+        " Use this tool ONLY when the user asks for NOI."
     ),
     "parameters": {
         "type": "object",
@@ -81,6 +60,6 @@ CALCULATE_NOI_TOOL_SCHEMA = {
     },
 }
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
     
-    print(calculate_noi(1, '-2026-q2')) #testing regex python -m eval.run_eval
+#     print(calculate_noi(1, '-2026-q2')) #testing regex python -m eval.run_eval

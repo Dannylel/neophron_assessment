@@ -3,9 +3,22 @@ Argument confidence. Low probability on the property_id tokens means the model i
 
 updates: removed redundant isinstance() check in call_model() in generate.py
 return tool provenance instead of just the result; 
+added acl for tool 
+added groundness checks for tools 
+to do: reranking using logprobs and/or mmr 
+fix unboundedlocal error caused by mistakenly assigning the result and evidence whitelist only in the no-tool
+path
+add actual groundness based on substring matching using list of known entities(properties)
+for the structural claims like property-related questions that are NOT noi-based 
+fix a bug where i was looping over the entirety of the available chunks for the user rather than the cited ones
+in is_grounded()
+moved context from system msg to user content to make use of prefix caching 
+changed noi_allowed system prompt string, because tool-use was forced even when finance team were asking 
+about non-NOI-related figures
+eval using ollama's 
 
 perform preprocessing once with embedding instead of per each response 
-
+add lightweight model for prompt rewriting in case of no chunks meeting the minimum threshold for both 
 
 
 system = (

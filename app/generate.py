@@ -7,7 +7,7 @@ llama3.1) -- not a stub, and not a hand-rolled keyword router. Which model
 you use isn't graded; whether you can actually work with a real model's
 real behavior is.
 """
-import re
+import re, csv, calendar
 import json
 from typing import List, Dict
 import ollama
@@ -66,7 +66,6 @@ def call_model(prompt: str, tools: list | None = None) -> Dict:
             'name': first.function.name,
             'arguments': first.function.arguments
         }
-        # result=calculate_noi(**args)
         text=msg.content or None  #to ensure converting empty strings to None
     else:
         tool_call=None  #local variable to avoid editing the library's response object 
@@ -88,7 +87,24 @@ def _numbers(text: str) -> set:
 def _mentions_number(answer: str, value: float) -> bool:
     """Tool path: does the narrated answer contain the exact value the tool returned?"""
     return value in _numbers(answer)
+
+
+
 _CITED = re.compile(r"\[([^\]]+)\]")
+
+def _known_entities(csv_path="data/properties.csv"):
+    with open(csv_path, newline="") as f:
+        names = {r["name"] for r in csv.DictReader(f)}        # "Oak Hill Plaza", ...
+    short = {n.rsplit(" ", 1)[0] for n in names}              # "Oak Hill", "Maple Ridge", ...
+    months = set(calendar.month_name[1:])                     # "January" ... "December"
+    return names | short | months
+
+ENTITIES = _known_entities()
+
+def _entities(text: str) -> set:
+    text = _CITATION.sub("", text)                            # ignore [doc1.txt#0]
+    return {e for e in ENTITIES if re.search(rf"\b{re.escape(e)}\b", text)}
+#finds which known names appear in the answer. \b means: whole word only
 def is_grounded(answer: str, chunks: List[Chunk]) -> bool:
     """Task 1 grounding check: verify the answer's key claims (names,
     numbers, dates) actually appear in the retrieved chunks it was
@@ -96,32 +112,36 @@ def is_grounded(answer: str, chunks: List[Chunk]) -> bool:
     needs to exist, not be sophisticated.
     """
     cited = set(_CITED.findall(answer))
-    used = [c for c in chunks if c.chunk_id in cited]
+    used = [c for c in chunks if c.chunk_id in cited]       #chunks that are both cited AND retrieved 
     nums = _numbers(answer)
-    if nums and not used:            # numbers but no valid citation = not grounded
-        return False
-    evidence = set()
-    for c in chunks:
-      evidence |= _numbers(c.text)                # |= adds a set's items into evidence
-    return _numbers(answer) <= evidence
+    ents=_entities(answer)
+    if not nums and not ents:            #numbers and entities must be present
+        return True                      #nothing checkable 
+    if not used:
+        return False                     #no valid citation
 
+    text = " ".join(c.text for c in used).lower()
+    
+    evidence_nums = set().union(*(_numbers(c.text) for c in used))
+    return nums <= evidence_nums and all(e.lower() in text for e in ents)
     
     raise NotImplementedError("Implement a grounding / hallucination check")
 
 
 
 default=["Answer using ONLY the context below and cite chunk ids in brackets, e.g. [doc1.txt#0].",
-         "If the context does not contain the answer, say you don't know. "
+            "If the context does not contain the answer, say you don't know. "
 ]
-noi_allowed=["Never calculate NOI yourself; NOI must come from the calculate_noi tool,",
-             "even if the context doesn't mention the property."
-]
-noi_denied=["You cannot compute NOI for this user. If asked, say they are not authorized",
-            "and make no mention of the tool, and NEVER  calculate it from the context."   
-]
-def build_sys_prompt(context: str, noi_auth: bool) -> str: 
-   rules= default+(noi_allowed if noi_auth else noi_denied)
-   return '\n'.join(rules)+f'\n\n<context>\n{context}</context>'
+noi_allowed=[
+       "For any NOI question, always call the calculate_noi tool, even if the context doesn't mention the property.",
+       "Never calculate NOI yourself.Only call calculate_noi for NOI questions. Answer revenue or expense questions from the context, with citations.",
+   ]
+noi_denied=[
+       "This user is not authorized to view NOI figures. If asked about NOI, say so, and never calculate it from the context.",
+   ]
+def build_sys_prompt(noi_auth: bool) -> str: 
+   rules= '\n'.join(default+(noi_allowed if noi_auth else noi_denied))
+   return rules
 def answer_question(query: str, user_groups: List[str]) -> Dict:
     
     """Orchestration for both tasks:
@@ -148,28 +168,21 @@ def answer_question(query: str, user_groups: List[str]) -> Dict:
     # system = (
     #     "Answer using ONLY the context below and cite chunk ids in brackets, e.g. [doc1.txt#0]. "
     #     "If the context does not contain the answer, say you don't know. "
-    #     "Never calculate NOI yourself; NOI must come from the calculate_noi tool.\n\n"
-    #     f"Context:\n{context}"
-    # )
-    # system = (
-    #     "Answer using ONLY the context below and cite chunk ids in brackets, e.g. [doc1.txt#0]. "
-    #     "If the context does not contain the answer, say you don't know. "
-    #     "Never calculate NOI yourself; NOI must come from the calculate_noi tool, additionally."
+    #     "Never calculate NOI yourself; NOI must come from the calculate_noi tool."
     #     "NOI questions, always call calculate_noi, even if the context doesn't mention the property.\n\n"
     #     f"Context:\n{context}"
     # )
     
-    system = build_sys_prompt(context, noi_auth=allowed)
-    messages = [{"role": "system", "content": system}, {"role": "user", "content": query}]
+    system = build_sys_prompt(noi_auth=allowed)
+    messages = [{"role": "system", "content": system}, 
+                {"role": "user", "content": f"<context>\n{context}\n</context>\n\nQuestion: {query}"}]
     # messages = ['system', {'role':'user','content':query}]
 
    
     first = call_model(messages, tools)
-
     tool_log=[]
     if first['tool_call']:
-        # name=first.function.name
-        # args=first.functiopn.arguments
+        
         name=first['tool_call']['name']
         arguments=first['tool_call']['arguments']
         result = None
@@ -184,33 +197,39 @@ def answer_question(query: str, user_groups: List[str]) -> Dict:
         tool_log.append({'name':name, 'arguments':arguments,'result':content})
         
 
-        messages.append(first['raw'])
+        # messages.append(first['raw'])
+        messages.append(first['raw'].model_dump(exclude_none=True))     #converts ollama message object into dict 
         messages.append({'role': 'tool', 'content':json.dumps(content),'tool_name':name})
     # response2 = ollama.chat(model=CHAT_MODEL, messages=messages, tools=OLLAMA_TOOLS)
-        final= call_model(messages, None)  #intentionally not passing tools for narration call
+        final= call_model(messages, None)  #intentionally not passing tools for narration call so the model can’t loop for a tool that doesnt exist 
+        #if passed, ollama can cache the prefix  but it should be inside a small loop  
+        
         model_answer = final['text'] or ""
         answer = model_answer
         if result is None: 
            grounded = False
-           answer = f"I couldn't calculate the NOI:{content['error']}"
-        grounded = isinstance(result, float) and _mentions_number(answer, result)
+           answer = f"I couldn't calculate the NOI:{content}"
+        # grounded = isinstance(result, float) and _mentions_number(answer, result)
+        else:
+           #here i declared 3 sources of truth
+            trusted = ({result['result'], result['revenue'],result['expenses']}
+                 #1 tool's output
+                | _numbers(json.dumps(arguments))    #2 tool-call arguments    
+                | set().union(*(_numbers(c.text) for c in chunks)))  #3  retrieved chunks
+            grounded = (_mentions_number(answer, result["result"]) 
+                        and _numbers(answer) <= trusted) 
+            if not grounded:
+                        #any figure not found in any authorized chunk (i.e: model-computed roi ) is never shown
+                        answer = (f"The NOI for property {arguments['property_id']} in "
+                                  f"{arguments['period']} is ${result['result']:,.0f} "
+                                  f"(revenue ${result['revenue']:,.0f} − expenses ${result['expenses']:,.0f}).")  
+           
     else:
-        #here i declared 3 sources of truth
-        trusted = ({result['result'], result['revenue'],result['expenses']}     #1 tool's output
-                   | _numbers(json.dumps(arguments))    #2 tool-call arguments    
-                   | set().union(*(_numbers(c.text) for c in chunks)))  #3  retrieved chunks
-        grounded = (_mentions_number(answer, result["result"])
-                    and _numbers(answer) <= trusted)
-
         model_answer = first['text'] or ""
         answer = model_answer
         grounded = is_grounded(answer, chunks)
-        if not grounded:
-            # a figure not found in any authorized chunk (EX: model-computed roi ) is never shown
-            # answer = "I can't verify that answer against the documents available to you."
-            answer = (f"The NOI for property {arguments['property_id']} in "
-                      f"{arguments['period']} is ${result['result']:,.0f} "
-                      f"(revenue ${result['revenue']:,.0f} − expenses ${result['expenses']:,.0f}).")
+        if not grounded: 
+            answer = "I can't verify that answer against the documents available to you."
     
     return {
         'answer': answer, 
@@ -219,7 +238,8 @@ def answer_question(query: str, user_groups: List[str]) -> Dict:
         'used_tool': bool(tool_log),
         'tool_calls': tool_log, 
         'model_answer': model_answer, 
-        'retrieved': [{'chunk_id':c.chunk_id, 'score': round(c.score, 3), 'text':c.text}for c in chunks]
+        'retrieved': [{'chunk_id':c.chunk_id, 'score': round(c.score, 3), 'text':c.text}for c in chunks],
+        'messages': messages,
     }
 
 
