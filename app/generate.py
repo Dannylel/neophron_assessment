@@ -8,6 +8,7 @@ you use isn't graded; whether you can actually work with a real model's
 real behavior is.
 """
 import re
+import json
 from typing import List, Dict
 import ollama
 from .retrieval import retrieve, Chunk, is_authorized
@@ -53,7 +54,8 @@ def call_model(prompt: str, tools: list | None = None) -> Dict:
       raise TypeError(f"prompt must be a str or a list of messages, got {type(prompt).__name__}")
     response = ollama.chat(
     model=CHAT_MODEL, 
-    messages=[{"role": "user", "content": prompt}] if isinstance(prompt, str) else prompt, 
+    # messages=[{"role": "user", "content": prompt}] if isinstance(prompt, str) else prompt, 
+    messages=messages,
     tools=tools, 
     options={"temperature": 0}
     )
@@ -103,6 +105,19 @@ def is_grounded(answer: str, chunks: List[Chunk]) -> bool:
     raise NotImplementedError("Implement a grounding / hallucination check")
 
 
+
+default=["Answer using ONLY the context below and cite chunk ids in brackets, e.g. [doc1.txt#0].",
+         "If the context does not contain the answer, say you don't know. "
+]
+noi_allowed=["Never calculate NOI yourself; NOI must come from the calculate_noi tool,",
+             "even if the context doesn't mention the property."
+]
+noi_denied=["You cannot compute NOI for this user. If asked, say they are not authorized",
+            "and make no mention of the tool, and NEVER  calculate it from the context."   
+]
+def build_sys_prompt(context: str, noi_auth: bool) -> str: 
+   rules= default+(noi_allowed if noi_auth else noi_denied)
+   return '\n'.join(rules)+f'\n\n<context>\n{context}</context>'
 def answer_question(query: str, user_groups: List[str]) -> Dict:
     
     """Orchestration for both tasks:
@@ -126,12 +141,21 @@ def answer_question(query: str, user_groups: List[str]) -> Dict:
     
     chunks = retrieve(query, user_groups)
     context = "\n".join(f"[{c.chunk_id}] {c.text}" for c in chunks)
+    # system = (
+    #     "Answer using ONLY the context below and cite chunk ids in brackets, e.g. [doc1.txt#0]. "
+    #     "If the context does not contain the answer, say you don't know. "
+    #     "Never calculate NOI yourself; NOI must come from the calculate_noi tool.\n\n"
+    #     f"Context:\n{context}"
+    # )
     system = (
         "Answer using ONLY the context below and cite chunk ids in brackets, e.g. [doc1.txt#0]. "
         "If the context does not contain the answer, say you don't know. "
-        "Never calculate NOI yourself; NOI must come from the calculate_noi tool.\n\n"
+        "Never calculate NOI yourself; NOI must come from the calculate_noi tool, additionally."
+        "NOI questions, always call calculate_noi, even if the context doesn't mention the property.\n\n"
         f"Context:\n{context}"
     )
+    
+    system = build_sys_prompt(context, noi_auth=allowed)
     messages = [{"role": "system", "content": system}, {"role": "user", "content": query}]
     # messages = ['system', {'role':'user','content':query}]
 
@@ -148,14 +172,15 @@ def answer_question(query: str, user_groups: List[str]) -> Dict:
           result = "Error: not authorized to use this tool"
         else:
             try:
-                result = calculate_noi(**arguments)
+                result,r = calculate_noi(**arguments)['result'],calculate_noi(**arguments) 
+
             except (ValueError, TypeError) as e:
                 result = f"Error: {e}"
-        tool_log.append({'name':name, 'arguments':arguments, 'result':result})
+        tool_log.append({'name':name, 'arguments':arguments,'result':r})
         # result=calculate_noi(**arguments)
 
         messages.append(first['raw'])
-        messages.append({'role': 'tool', 'content':str(result),'tool_name':name})
+        messages.append({'role': 'tool', 'content':json.dumps(result),'tool_name':name})
     # response2 = ollama.chat(model=CHAT_MODEL, messages=messages, tools=OLLAMA_TOOLS)
         final= call_model(messages, tools)
         model_answer = final['text'] or ""
@@ -175,7 +200,7 @@ def answer_question(query: str, user_groups: List[str]) -> Dict:
         'citations': [c.chunk_id for c in chunks],
         'grounded': grounded,
         'used_tool': bool(tool_log),
-        'tool_calls': tool_log,
+        'tool_calls': tool_log, 
         'model_answer': model_answer, 
         'retrieved': [{'chunk_id':c.chunk_id, 'score': round(c.score, 3), 'text':c.text}for c in chunks]
     }

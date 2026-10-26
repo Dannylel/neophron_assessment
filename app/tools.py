@@ -8,6 +8,7 @@ tool schemas, or Ollama's tool support for models like qwen2.5 / llama3.1).
 """
 import csv
 import re 
+from typing import List, Dict   
 
 def property_directory(csv_path: str = "data/properties.csv") -> str:
     with open(csv_path, newline="") as f:
@@ -26,7 +27,7 @@ def _normalize_period(period: str) -> str:
     return text
 
 
-def calculate_noi(property_id: int, period: str, csv_path: str = "data/properties.csv") -> float:
+def calculate_noi(property_id: int, period: str, csv_path: str = "data/properties.csv") -> Dict:
     try:
         pid = int(property_id)
     except (TypeError, ValueError):
@@ -36,7 +37,9 @@ def calculate_noi(property_id: int, period: str, csv_path: str = "data/propertie
         for row in csv.DictReader(f):
             if int(row['property_id'])==pid and _normalize_period(row['period'])==wanted_period:
                 result=float(row['revenue'])-float(row['operating_expenses'])
-                return result
+                # return result 
+                return {'result': result, 'revenue':float(row['revenue']),
+                        'expenses':float(row['operating_expenses']), 'source' : f'{csv_path}#property_id = {pid}, period = {wanted_period}'}
     raise ValueError(f"No data for property {property_id} in {wanted_period}")
     raise NotImplementedError("Read properties.csv and compute NOI deterministically")
 
@@ -80,4 +83,4 @@ CALCULATE_NOI_TOOL_SCHEMA = {
 
 if __name__ == "__main__":
     
-    print(calculate_noi(1, '-2026-q2')) #testing regex
+    print(calculate_noi(1, '-2026-q2')) #testing regex python -m eval.run_eval

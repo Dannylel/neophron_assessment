@@ -52,7 +52,7 @@ def load_documents(documents_dir: str = "documents") -> List[Chunk]:
         
         # Split paragraphs and filter out empty ones
         paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
-        chunk_size = 20
+        # chunk_size = 20
         chunk_id = 0 
         # chunks: List[Chunk] = []
 
@@ -128,7 +128,7 @@ def retrieve(query: str, user_groups: List[str], top_k: int = 3) -> List[Chunk]:
     matches=[]
     
     q = ollama.embed(model=EMBED_MODEL,input=query)
-    
+    score_threshold = 0.4
     for ch in chunks: 
         auth=is_authorized(ch.acl,user_groups)
         if auth==False: 
@@ -136,7 +136,9 @@ def retrieve(query: str, user_groups: List[str], top_k: int = 3) -> List[Chunk]:
         else: 
             scored_chunks=replace(ch, score=_cosine(q.embeddings[0],ch.embedding))
             matches.append(scored_chunks)
+            
     results=sorted(matches, key=lambda m: m.score, reverse=True)[:top_k]
+    
     # print(type(ch.embedding))
     # print(type(ch.embedding[0]))
     # print(ch.embedding[0])

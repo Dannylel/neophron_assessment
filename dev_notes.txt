@@ -1,0 +1,17 @@
+Argument confidence. Low probability on the property_id tokens means the model is unsure which property the user meant. That’s a good trigger to ask “Did you mean X or Y?” instead of computing NOI for the wrong building.
+
+
+updates: removed redundant isinstance() check in call_model() in generate.py
+return tool provenance instead of just the result; 
+
+perform preprocessing once with embedding instead of per each response 
+
+
+
+system = (
+        "Answer using ONLY the context below and cite chunk ids in brackets, e.g. [doc1.txt#0]. "
+        "If the context does not contain the answer, say you don't know. "
+        "Never calculate NOI yourself; NOI must come from the calculate_noi tool, additionally."
+        "NOI questions, always call calculate_noi, even if the context doesn't mention the property.\n\n"
+        f"Context:\n{context}"
+    )
