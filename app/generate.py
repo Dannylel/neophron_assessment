@@ -230,7 +230,7 @@ def answer_question(query: str, user_groups: List[str]) -> Dict:
         grounded = is_grounded(answer, chunks)
         if not grounded: 
             answer = "I can't verify that answer against the documents available to you."
-    
+        
     return {
         'answer': answer, 
         'citations': [c.chunk_id for c in chunks],
