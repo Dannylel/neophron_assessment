@@ -216,14 +216,15 @@ def answer_question(query: str, user_groups: List[str]) -> Dict:
                  #1 tool's output
                 | _numbers(json.dumps(arguments))    #2 tool-call arguments    
                 | set().union(*(_numbers(c.text) for c in chunks)))  #3  retrieved chunks
-            grounded = (_mentions_number(answer, result["result"]) 
-                        and _numbers(answer) <= trusted) 
+            # grounded = (_mentions_number(answer, result["result"]) 
+            #             and _numbers(answer) <= trusted)
+            grounded = _numbers(answer) <= trusted 
             if not grounded:
                         #any figure not found in any authorized chunk (i.e: model-computed roi ) is never shown
-                        answer = (f"The NOI for property {arguments['property_id']} in "
-                                  f"{arguments['period']} is ${result['result']:,.0f} "
-                                  f"(revenue ${result['revenue']:,.0f} − expenses ${result['expenses']:,.0f}).")  
-           
+                        # answer = (f"The NOI for property {arguments['property_id']} in "
+                        #           f"{arguments['period']} is ${result['result']:,.0f} "
+                        #           f"(revenue ${result['revenue']:,.0f} − expenses ${result['expenses']:,.0f}).")  
+                        answer = "I can't verify that answer against the documents available to you."                        
     else:
         model_answer = first['text'] or ""
         answer = model_answer
